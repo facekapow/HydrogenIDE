@@ -80,7 +80,8 @@ module.exports = {
                     description: name.substr(0, 1).toUpperCase() + name.slice(1),
                     main: 'index.js',
                     dependencies: {
-                      'hydrogen-helpers': '^1.0.0'
+                      'hydrogen-helpers': '*',
+                      'electron-prebuilt': '*'
                     }
                   }, null, '  '), (err) => {
                     if (err) return cb(err, null);
@@ -89,22 +90,13 @@ module.exports = {
                       titleBarName: name.substr(0, 1).toUpperCase() + name.slice(1)
                     }, null, '  '), (err) => {
                       if (err) return cb(err, null);
-                      fs.mkdir(`${proj.path}/node_modules`, (err) => {
+                      app.web.createToast('Installing modules...');
+                      child_process.exec('npm install', {
+                        cwd: proj.path
+                      }, (err, stdout, stderr) => {
                         if (err) return cb(err, null);
-                        fs.mkdir(`${proj.path}/node_modules/hydrogen-helpers`, (err) => {
-                          if (err) return cb(err, null);
-                          ncp(`${__dirname}/hydrogen-helpers`, `${proj.path}/node_modules/hydrogen-helpers`, (err) => {
-                            if (err) return cb(err, null);
-                            app.web.createToast('Installing Electron...');
-                            child_process.exec('npm install --save electron-prebuilt', {
-                              cwd: proj.path
-                            }, (err, stdout, stderr) => {
-                              if (err) return cb(err, null);
-                              cb(null, proj);
-                              setWatch(proj.path);
-                            });
-                          });
-                        });
+                        cb(null, proj);
+                        setWatch(proj.path);
                       });
                     });
                   });
