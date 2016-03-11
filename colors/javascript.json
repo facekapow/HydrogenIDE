@@ -1,0 +1,18 @@
+{
+  "scopeName": "source.js",
+  "name": "JavaScript",
+  "fileTypes": ["js"],
+  "patterns": [
+    {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.js",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.js"
+        }
+      ]
+    }
+  ]
+}

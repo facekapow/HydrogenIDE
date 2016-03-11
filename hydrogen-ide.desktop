@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Hydrogen IDE
+Comment=An IDE for Electron
+Exec=/home/ariel/git/HydrogenIDE/exec.sh
+Path=/home/ariel/git/HydrogenIDE
+Icon=/home/ariel/git/HydrogenIDE/icons/hicolor/512x512@2x/apps/hydrogen-ide.png
+Terminal=false
+Type=Application
+Categories=Utility;Application;Development;

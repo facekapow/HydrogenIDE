@@ -1,0 +1,34 @@
+{
+  "__macOnly": {
+    "{{titleBarName}}": {
+      "__default": "app"
+    }
+  },
+  "File": {
+    "Save File": ["CmdOrCtrl+S", null, "saveFile"],
+    "New Project": ["CmdOrCtrl+Shift+N", null, "newProject"],
+    "Open Project": ["CmdOrCtrl+Shift+O", null, "openProject"],
+    "__separator": "__separator",
+    "Reload Files": ["CmdOrCtrl+R", null, "reloadProject"],
+    "Remove all .DS_Stores": "removeDSStores"
+  },
+  "Edit": {
+    "__default": "edit",
+    "Paste": ["CmdOrCtrl+V", null, "wantsPaste"]
+  },
+  "View": {
+    "__default": "view"
+  },
+  "Window": {
+    "__default": "window",
+    "Toggle Developer Tools": [{
+      "default": "CmdOrCtrl+Shift+I",
+      "mac": "CmdOrCtrl+Alt+I"
+    }, null, "toggleDevTools"],
+    "Close Current Tab": ["CmdOrCtrl+W", null, "closeTab"]
+  },
+  "Help": {
+    "__default": "edit",
+    "Learn Nothing": "learnNothing"
+  }
+}
