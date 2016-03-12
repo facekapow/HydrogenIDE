@@ -15,14 +15,18 @@ app.web.__addFunction('sendProject', (proj) => window.loadProject(proj));
 app.web.__addFunction('getFileContents', (cb) => {
   const tab = defaultTabManager.activeTab;
   if (tab) {
-    const lines = tab.contElement.get('.lines')[0];
+    const lines = tab.contElement.getElementsByClassName('lines')[0];
     if (lines) {
       let cont = '';
-      const children = lines.get('.line');
+      const children = lines.getElementsByClassName('line');
       for (let i in children) {
+        if (!children.hasOwnProperty(i)) continue;
         const line = children[i];
         let lineCont = '';
-        for (let char of line.get('.char')) {
+        const tmp = line.getElementsByClassName('char');
+        for (let j in tmp) {
+          if (!tmp.hasOwnProperty(j)) continue;
+          const char = tmp[j];
           lineCont += char.html().replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
         }
         cont += lineCont;

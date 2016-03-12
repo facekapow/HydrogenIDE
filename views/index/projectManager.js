@@ -7,13 +7,13 @@ window.project = null;
 
 window.loadProjectFiles = (bar, path) => {
   fs.readdir(path, (err, files) => {
-    if (err) return Toast.makeText(`Could not read project folder: ${err.message}`, Toast.LENGTH_SHORT, short).show();
+    if (err) return Toast.makeText(`Could not read project folder: ${err.message}`, Toast.LENGTH_SHORT, false).show();
     bar.removeChildren();
     for (let i in files) {
       const file = files[i];
       (function(file) {
         fs.stat(`${path}/${file}`, (err, stats) => {
-          if (err) return Toast.makeText(`Could not read project folder: ${err.message}`, Toast.LENGTH_SHORT, short).show();
+          if (err) return Toast.makeText(`Could not read project folder: ${err.message}`, Toast.LENGTH_SHORT, false).show();
           if (stats.isDirectory()) {
             bar.appendChild(new SidebarFolderItem(file, path));
           } else {
@@ -32,7 +32,8 @@ window.loadProject = proj => {
   const addFile = new SidebarToolItem('+ Add File');
   const addFolder = new SidebarToolItem('+ Add Folder');
   const runProject = new SidebarToolItem('\u25B6 Run');
-  const installPkg = new SidebarToolItem('+ Install');
+  const installPkg = new SidebarToolItem('+ Install Pkg');
+  const updatePkgs = new SidebarToolItem('\u2B06 Update Pkgs');
   addFile.on('click', () => {
     const dialog = new WebDialog({
       type: 2,
@@ -40,7 +41,7 @@ window.loadProject = proj => {
     });
     dialog.on('inputSubmitted', input => {
       fs.writeFile(`${proj.path}/${input}`, '', err => {
-        if (err) return Toast.makeText(`Could not creat file: ${err.message}`, Toast.LENGTH_SHORT, short).show();
+        if (err) return Toast.makeText(`Could not creat file: ${err.message}`, Toast.LENGTH_SHORT, false).show();
         window.loadProjectFiles(bar, proj.path);
       });
     });
@@ -54,7 +55,7 @@ window.loadProject = proj => {
     });
     dialog.on('inputSubmitted', input => {
       fs.mkdir(`${proj.path}/${input}`, err => {
-        if (err) return Toast.makeText(`Could not create folder: ${err.message}`, Toast.LENGTH_SHORT, short).show();
+        if (err) return Toast.makeText(`Could not create folder: ${err.message}`, Toast.LENGTH_SHORT, false).show();
         window.loadProjectFiles(bar, proj.path);
       });
     });
@@ -76,17 +77,26 @@ window.loadProject = proj => {
       child_process.exec(`npm install --save ${input}`, {
         cwd: proj.path
       }, (err, stdout, stderr) => {
-        if (err) return Toast.makeText(`Could not install package: ${err.message}`, Toast.LENGTH_SHORT, short).show();
+        if (err) return Toast.makeText(`Could not install package: ${err.message}`, Toast.LENGTH_SHORT, false).show();
         window.loadProjectFiles(bar, proj.path);
-        Toast.make('Finished install package.', Toast.LENGTH_SHORT, false).show();
+        Toast.makeText('Finished package install.', Toast.LENGTH_SHORT, false).show();
       });
     });
     defaultWebDialogManager.addDialog(dialog);
     defaultWebDialogManager.checkQueue();
   });
+  updatePkgs.on('click', () => {
+    child_process.exec('npm install', {
+      cwd: proj.path
+    }, (err, stdout, stderr) => {
+      if (err) return Toast.makeText(`Could not update packages: ${err.message}`, Toast.LENGTH_SHORT, false).show();
+      Toast.makeText('Finished updating packages.', Toast.LENGTH_SHORT, false).show();
+    });
+  });
   bar.appendTool(addFile);
   bar.appendTool(addFolder);
   bar.appendTool(runProject);
   bar.appendTool(installPkg);
+  bar.appendTool(updatePkgs);
   window.loadProjectFiles(bar, proj.path);
 }

@@ -780,14 +780,14 @@ class SidebarFileItem extends EventEmitter {
                     e.preventDefault();
                     if (exists(cursor)) {
                       let sib = cursor.nextSibling;
-                      if (exists(sub, sub.nextSibling)) {
-                        sub.nextSibling.click();
+                      if (exists(sib) && exists(sib.nextSibling)) {
+                        sib.nextSibling.click();
                       } else {
                         if (exists(sib)) {
-                          line = cursor.parentNode;
+                          const line = cursor.parentNode;
                           line.click();
                         } else {
-                          line = cursor.parentNode.nextSibling;
+                          const line = cursor.parentNode.nextSibling;
                           if (exists(line)) {
                             if (exists(line.firstChild)) {
                               line.firstChild.click();
@@ -802,7 +802,7 @@ class SidebarFileItem extends EventEmitter {
                   case 38:
                     e.preventDefault();
                     if (exists(cursor)) {
-                      const i = Arrat.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
+                      const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
                       const line = cursor.parentNode.previousSibling;
                       if (exists(line)) {
                         const elm = line.childNodes[i];
@@ -817,7 +817,7 @@ class SidebarFileItem extends EventEmitter {
                   case 40:
                     e.preventDefault();
                     if (exists(cursor)) {
-                      const i = Arrat.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
+                      const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
                       const line = cursor.parentNode.nextSibling;
                       if (exists(line)) {
                         const elm = line.childNodes[i];
