@@ -20,14 +20,16 @@ darkerGrey = darken(grey, 20%)
 *, *:before, *:after
   box-sizing: border-box
 
-html, body
-  height: 100vh
-  width: 100vw
+html
+  height: 93%
+  width: 100%
+  overflow: hidden
 
 body
   color: white
   background-color: darkerGrey
   margin: 0
+  overflow: auto
   padding: 0
   -webkit-overflow-scrolling: none
 
@@ -46,13 +48,17 @@ body
   background: white
 
 #tabs, #tabConts
-  height: 100%
+  height: 100vh
+  display: flex
+  flex-direction: column
 
 #tabHeaders
   background-color: darken(darkerGrey, 15%)
   display: inline-block
 
 .sidebar
+  display: flex
+  flex-direction: column
   height: 100vh
   max-width: 200px
   float: left
@@ -75,7 +81,6 @@ body
   padding-right: 7px
 
 .sidebarItemContainer
-  height: 100%
   overflow: scroll
 
 .sidebarFile, .sidebarTool, .sidebarFolder
@@ -150,7 +155,8 @@ body
   height: 100%
 
 .activeCont
-  display: block
+  display: flex
+  flex-direction: column
 
 .tab
   text-align: center
@@ -177,7 +183,6 @@ body
 
 .lines
   overflow: scroll
-  display: block
   outline: none !important
   font-family: 'Source Code Pro'
   height: 100%

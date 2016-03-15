@@ -1,0 +1,58 @@
+.storage, .keyword, .markup.italic {
+  color: #c678dd;
+}
+
+.comment {
+  color: #b1b6bf;
+  font-style: italic;
+}
+
+.comment.line {
+  display: unset;
+  background-color: inherit;
+}
+
+.constant, .support.constant {
+  color: #d19a66;
+}
+
+.entity, .support.class {
+  color: #e5c07b;
+}
+
+.invalid {
+  background-color: #e05252;
+  color: #fff;
+}
+
+.markup.underline {
+  text-decoration: underline;
+}
+
+.markup.bold {
+  font-weight: bold;
+}
+
+.markup.italic {
+  font-style: italic;
+}
+
+.markup.raw, .string {
+  color: #98c379;
+}
+
+.support.variable, .markup.heading, .variable {
+  color: #e06c75;
+}
+
+.support.function, .support.type, .constant.character.escape {
+  color: #56b6c2;
+}
+
+.variable.parameter {
+  color: #abb2bf;
+}
+
+.keyword.operator {
+  color: unset !important;
+}

@@ -63,9 +63,13 @@ window.loadProject = proj => {
     defaultWebDialogManager.checkQueue();
   });
   runProject.on('click', () => {
-    child_process.spawn(`${proj.path}/node_modules/.bin/electron`, [`${proj.path}/index.js`], {
-      cwd: proj.path,
-      detatched: true
+    Toast.makeText('Launching Electron...', Toast.LENGTH_LONG, false).show();
+    app.main.exec(`${proj.path}/node_modules/.bin/electron ${proj.path}/index.js`, {
+      cwd: proj.path
+    }, (err, stderr, stdout) => {
+      let txt = 'Application exited normally with code 0';
+      if (err) txt = 'Application exited with unknown abnormal code';
+      Toast.makeText(txt, Toast.LENGTH_LONG, false).show();
     });
   });
   installPkg.on('click', () => {
@@ -74,6 +78,7 @@ window.loadProject = proj => {
       text: 'npm package name (can also be a path)'
     });
     dialog.on('inputSubmitted', input => {
+      Toast.makeText('Running npm...', Toast.LENGTH_SHORT, false).show();
       child_process.exec(`npm install --save ${input}`, {
         cwd: proj.path
       }, (err, stdout, stderr) => {
@@ -86,7 +91,8 @@ window.loadProject = proj => {
     defaultWebDialogManager.checkQueue();
   });
   updatePkgs.on('click', () => {
-    child_process.exec('npm install', {
+    Toast.makeText('Running npm...', Toast.LENGTH_SHORT, false).show();
+    child_process.exec('npm update', {
       cwd: proj.path
     }, (err, stdout, stderr) => {
       if (err) return Toast.makeText(`Could not update packages: ${err.message}`, Toast.LENGTH_SHORT, false).show();

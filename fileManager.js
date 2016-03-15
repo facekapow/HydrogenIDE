@@ -81,7 +81,7 @@ module.exports = {
                     main: 'index.js',
                     dependencies: {
                       'hydrogen-helpers': '*',
-                      'electron-prebuilt': '*'
+                      'electron-prebuilt': '>=0.37.1 || <0.37' // must be 0.37.1+ or less than 0.37 (0.37 has a bug that won't let it start on OSX)
                     }
                   }, null, '  '), (err) => {
                     if (err) return cb(err, null);

@@ -4,6 +4,7 @@ const EventEmitter = require('events');
 const __ = require('mini-utils');
 const path = require('path');
 const fs = require('fs');
+const Highlights = require('highlights');
 const exists = (...objs) => {
   for (let obj of objs) {
     if (obj === null || obj === undefined || typeof obj === 'undefined') {
@@ -718,7 +719,10 @@ class SidebarFileItem extends EventEmitter {
               if (exists(cursor)) {
                 switch(e.keyCode) {
                   case 86:
-                    if (e.ctrlKey) e.preventDefault(), window.paste();
+                    if (e.ctrlKey) {
+                      e.preventDefault();
+                      window.paste();
+                    }
                     break;
                   case 8:
                     e.preventDefault();
@@ -757,7 +761,7 @@ class SidebarFileItem extends EventEmitter {
                     break;
                   case 32:
                     e.preventDefault();
-                    const char = document.create('char', {
+                    const char = document.create('span', {
                       className: 'char',
                       innerHTML: '\u00A0'
                     });
@@ -837,6 +841,7 @@ class SidebarFileItem extends EventEmitter {
                     document.body.dispatchEvent(e2);
                     break;
                 }
+                highlight();
               }
             }
           });
@@ -854,6 +859,7 @@ class SidebarFileItem extends EventEmitter {
                 });
                 appendListener(char);
                 cursor.parentNode.insertBefore(char, cursor);
+                highlight();
               }
             }
           });
@@ -887,7 +893,7 @@ class SidebarFileItem extends EventEmitter {
                   className: 'line'
                 });
                 for (let charStr of lineStr) {
-                  const char = document.create('div', {
+                  const char = document.create('span', {
                     className: 'char',
                     innerHTML: charStr.replace(' ', '\u00A0')
                   });
@@ -911,18 +917,48 @@ class SidebarFileItem extends EventEmitter {
             }
           }
           tab.contElement.appendChild(lines);
-          /*const colorizers = fs.readdirSync(`${__dirname}/../../colors`);
-          for (let colorizer of colorizers) {
-            const json = JSON.parse(String(fs.readFileSync(`${__dirname}/../../colors`)));
-            let found = false;
-            for (let ext of json.fileTypes) {
-              if (path.extname(fileName).slice(1).toLowerCase() === ext.toLowerCase()) {
-                found = true;
-                break;
-              }
+          const highlighter = new Highlights();
+          function highlight() {
+            if (path.extname(fileName) === '.js') {
+              app.web.getFileContents((tmpCont) => {
+                const html = highlighter.highlightSync({
+                  fileContents: tmpCont,
+                  scopeName: 'source.js'
+                });
+                const tmpElm = document.create('div', {
+                  innerHTML: html
+                });
+                const lines2 = Array.prototype.slice.call(tmpElm.getElementsByClassName('line'), 0);
+                const lines3 = Array.prototype.slice.call(lines.getElementsByClassName('line'), 0);
+                for (let i in lines2) {
+                  if (!lines2.hasOwnProperty(i)) continue;
+                  const line = lines2[i];
+                  const line2 = lines3[i];
+                  if (!line2) continue;
+                  const chars = Array.prototype.slice.call(line2.getElementsByClassName('char'), 0);
+                  let char = 0;
+                  function travel(node) {
+                    if (node.childNodes && node.childNodes.length > 0) {
+                      for (let j in node.childNodes) {
+                        if (!node.childNodes.hasOwnProperty(j)) continue;
+                        travel(node.childNodes[j]);
+                      }
+                    } else {
+                      if (!node.wholeText) return;
+                      for (let i = 0, len = node.wholeText.length; i < len; i++) {
+                        if (chars[char]) chars[char].className = 'char ' + node.parentNode.parentNode.className;
+                        char++;
+                      }
+                      node.parentNode.removeChild(node);
+                    }
+                  }
+                  travel(line);
+                  appendLineListener(lines2[i]);
+                }
+              });
             }
-            if (found) break;
-          }*/
+          }
+          highlight();
           defaultTabManager.addTab(tab);
           defaultTabManager.setActiveTab(tab.id);
           lines.focus();
