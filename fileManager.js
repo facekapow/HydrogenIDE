@@ -91,11 +91,12 @@ module.exports = {
                     }, null, '  '), (err) => {
                       if (err) return cb(err, null);
                       app.web.createToast('Installing modules...');
-                      child_process.exec('/usr/bin/env npm install', {
+                      child_process.exec('/usr/local/bin/npm install', {
                         cwd: proj.path
                       }, (err, stdout, stderr) => {
                         if (err) return cb(err, null);
                         cb(null, proj);
+                        app.web.createToast('Done installing modules.');
                         setWatch(proj.path);
                       });
                     });
