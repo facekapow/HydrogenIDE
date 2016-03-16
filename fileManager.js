@@ -91,7 +91,7 @@ module.exports = {
                     }, null, '  '), (err) => {
                       if (err) return cb(err, null);
                       app.web.createToast('Installing modules...');
-                      child_process.exec('npm install', {
+                      child_process.exec('/usr/bin/env npm install', {
                         cwd: proj.path
                       }, (err, stdout, stderr) => {
                         if (err) return cb(err, null);
