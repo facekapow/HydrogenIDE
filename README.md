@@ -15,3 +15,5 @@ npm install
 # in the `HydrogenIDE` folder...
 npm start
 ```
+## Notes
+The "Run", "Install", and "Update" tools aren't currently working in the packaged release version.
