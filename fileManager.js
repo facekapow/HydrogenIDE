@@ -26,7 +26,7 @@ const setWatch = (dir) => {
   currWatch = fs.watch(dir, {
     persistent: false,
     recursive: true
-  }, (e) => app.web.reloadProject());
+  }, () => app.web.reloadProject());
 }
 
 module.exports = {
@@ -91,9 +91,9 @@ module.exports = {
                     }, null, '  '), (err) => {
                       if (err) return cb(err, null);
                       app.web.createToast('Installing modules...');
-                      child_process.exec('/usr/local/bin/npm install', {
+                      child_process.exec('npm install', {
                         cwd: proj.path
-                      }, (err, stdout, stderr) => {
+                      }, (err) => {
                         if (err) return cb(err, null);
                         cb(null, proj);
                         app.web.createToast('Done installing modules.');

@@ -20,6 +20,22 @@ const range = (num1, num2, including) => {
   if (including) ret.push(num2);
   return ret;
 }
+const highlighter = new Highlights();
+app.main.getHighlighters((err, hls) => {
+  if (err) app.web.createToast(`Error loading syntax highlighters: ${err.message}`);
+  for (let hl of hls) {
+    highlighter.requireGrammarsSync({
+      modulePath: `${app.getPath('userData')}/highlighters/node_modules/${hl}`
+    });
+  }
+});
+
+const getScopeNameForExtension = (ext) => {
+  const extsJSON = fs.readFileSync(`${app.getPath('userData')}/highlighters/extensions.json`);
+  const exts = JSON.parse(String(extsJSON));
+  for (const scopeExt of Object.keys(exts)) if (`.${scopeExt}` === ext) return exts[scopeExt];
+  return '';
+}
 
 class Tab extends EventEmitter {
   constructor(tabName, tabId, tabCont, tabController) {
@@ -601,6 +617,47 @@ class SidebarFolderItem extends EventEmitter {
   }
 }
 
+class ContextMenu extends EventEmitter {
+  constructor(items, x, y) {
+    super();
+    this._div = document.create('div', {
+      style: {
+        top: y + 'px',
+        left: x + 'px'
+      },
+      className: 'ctxMenu'
+    });
+    this._items = [];
+    for (var i = 0; i < items.length; i++) {
+      ((i) => {
+        var item = document.create('span', {
+          className: 'menuItem linkStyle',
+          innerHTML: items[i]
+        });
+        item.on('click', () => this.emit('click', i));
+        this._items.push(item);
+        this._div.appendChild(item);
+      })(i);
+    }
+    this._overlay = document.create('div', {
+      className: 'dialogOverlay noColor'
+    });
+    this._overlay.on('click', () => this.close());
+    document.body.appendChild(this._div);
+    document.body.appendChild(this._overlay);
+    this._overlay.css({
+      visibility: 'visible',
+      opacity: 1
+    });
+  }
+  close() {
+    this._div.remove();
+    this._div = null;
+    this._overlay.remove();
+    this._overlay = null;
+  }
+}
+
 class SidebarFileItem extends EventEmitter {
   constructor(fileName, pth) {
     super();
@@ -611,319 +668,341 @@ class SidebarFileItem extends EventEmitter {
     Object.defineProperty(this, 'itemElement', {
       get: () => this._item
     });
-    this._item.on('click', () => {
-      this.emit('click');
-      const recursor = (fn, restPath) => {
-        if (defaultTabManager.tabExists({
-          withName: fn
-        })) {
-          return recursor(`${path.basename(restPath)}/${fn}`, path.dirname(restPath));
-        } else {
-          return fn;
-        }
-      }
-      const name = recursor(fileName, pth);
-      if (!(defaultTabManager.tabExists({
-        withName: name
-      }))) {
-        fs.readFile(`${pth}/${fileName}`, (err, cont) => {
-          if (exists(err)) return Toast.makeText(`Could not create file sidebar item: ${err.message}`, Toast.LENGTH_SHORT, false).show();
-          cont = String(cont);
-          let lines = document.create('div', {
-            className: 'lines',
-            tabIndex: -1
-          });
-          let lineArr = cont.split('\n');
-          const getCursor = () => lines.getElementsByClassName('lineCursor')[0];
-          const rmCursor = () => {
-            const cursor = getCursor();
-            if (exists(cursor)) {
-              const prev = cursor.previousSibling;
-              const next = cursor.nextSibling;
-              if (exists(prev)) prev.style.paddingRight = '1px';
-              if (exists(next)) next.style.paddingLeft = '1';
-            }
-          }
-          const addCursor = () => {
-            const cursor = getCursor();
-            if (exists(cursor)) {
-              const prev = cursor.previousSibling;
-              const next = cursor.nextSibling;
-              if (exists(prev)) prev.style.paddingRight = '0px';
-              if (exists(next)) next.style.paddingLeft = '0px';
-            }
-          }
-          const mkCursor = () => document.create('span', {className: 'lineCursor'});
-          const getActive = () => lines.getElementsByClassName('activeLine')[0]
-          const appendListener = (char) => {
-            char.on('click', (e) => {
-              e.stopPropagation();
-              const x = e.clientX - char.getBoundingClientRect().left;
-              const cursor = getCursor();
-              rmCursor();
-              if (exists(cursor)) cursor.remove();
-              if (x <= char.offsetWidth/2) {
-                // left
-                char.parentNode.insertBefore(mkCursor(), char);
-              } else {
-                // right
-                if (exists(char.nextSibling)) {
-                  char.parentNode.insertBefore(mkCursor(), char.nextSibling);
-                } else {
-                  char.parentNode.appendChild(mkCursor());
-                }
-              }
-              addCursor();
-              const active = getActive();
-              if (exists(active)) active.removeClass('activeLine');
-              char.parentNode.addClass('activeLine');
-            });
-          }
-          const appendLineListener = (line) => {
-            line.on('click', (e) => {
-              lines.focus();
-              e.stopPropagation();
-              const cursor = getCursor();
-              rmCursor();
-              if (exists(cursor)) cursor.remove();
-              line.appendChild(mkCursor());
-              addCursor();
-              const active = getActive();
-              if (exists(active)) active.removeClass('activeLine');
-              line.addClass('activeLine');
-            });
-          }
-          for (let lineStr of lineArr) {
-            const line = document.create('div', {
-              className: 'line'
-            });
-            for (let charStr of lineStr) {
-              const char = document.create('span', {
-                className: 'char',
-                innerHTML: charStr.replace(' ', '\u00A0')
+    this._item.on('mousedown', (e) => {
+      if (e.button === 2) {
+        var ctx = new ContextMenu([
+          'Rename File'
+        ], e.screenX, e.screenY);
+        ctx.on('click', (i) => {
+          ctx.close();
+          switch(i) {
+            case 0:
+              // Rename File
+              const dialog = new WebDialog({
+                type: 2,
+                text: 'New file name + path'
               });
-              appendListener(char);
-              line.appendChild(char);
-            }
-            appendLineListener(line);
-            lines.appendChild(line);
+              dialog.on('inputSubmitted', input => {
+                fs.rename(`${pth}/${fileName}`, `${pth}/${input}`, (err) => {
+                  if (err) return Toast.makeText(`Could not rename file: ${err.message}`, Toast.LENGTH_SHORT, false).show();
+                });
+              });
+              defaultWebDialogManager.addDialog(dialog);
+              defaultWebDialogManager.checkQueue();
+              break;
           }
-          lines.firstChild.prependChild(document.create('span', {
-            className: 'lineCursor'
-          }));
-          lines.firstChild.addClass('activeLine');
-
-          lines.on('keydown', (e) => {
-            if (document.activeElement === lines) {
+        });
+      } else {
+        this.emit('click');
+        const recursor = (fn, restPath) => {
+          if (defaultTabManager.tabExists({
+            withName: fn
+          })) {
+            return recursor(`${path.basename(restPath)}/${fn}`, path.dirname(restPath));
+          } else {
+            return fn;
+          }
+        }
+        const name = recursor(fileName, pth);
+        if (!(defaultTabManager.tabExists({
+          withName: name
+        }))) {
+          fs.readFile(`${pth}/${fileName}`, (err, cont) => {
+            if (exists(err)) return Toast.makeText(`Could not create file sidebar item: ${err.message}`, Toast.LENGTH_SHORT, false).show();
+            cont = String(cont);
+            let lines = document.create('div', {
+              className: 'lines',
+              tabIndex: -1
+            });
+            let lineArr = cont.split('\n');
+            const getCursor = () => lines.getElementsByClassName('lineCursor')[0];
+            const rmCursor = () => {
               const cursor = getCursor();
               if (exists(cursor)) {
-                switch(e.keyCode) {
-                  case 86:
-                    if (e.ctrlKey) {
+                const prev = cursor.previousSibling;
+                const next = cursor.nextSibling;
+                if (exists(prev)) prev.style.paddingRight = '1px';
+                if (exists(next)) next.style.paddingLeft = '1';
+              }
+            }
+            const addCursor = () => {
+              const cursor = getCursor();
+              if (exists(cursor)) {
+                const prev = cursor.previousSibling;
+                const next = cursor.nextSibling;
+                if (exists(prev)) prev.style.paddingRight = '0px';
+                if (exists(next)) next.style.paddingLeft = '0px';
+              }
+            }
+            const mkCursor = () => document.create('span', {className: 'lineCursor'});
+            const getActive = () => lines.getElementsByClassName('activeLine')[0]
+            const appendListener = (char) => {
+              char.on('click', (e) => {
+                e.stopPropagation();
+                const x = e.clientX - char.getBoundingClientRect().left;
+                const cursor = getCursor();
+                rmCursor();
+                if (exists(cursor)) cursor.remove();
+                if (x <= char.offsetWidth/2) {
+                  // left
+                  char.parentNode.insertBefore(mkCursor(), char);
+                } else {
+                  // right
+                  if (exists(char.nextSibling)) {
+                    char.parentNode.insertBefore(mkCursor(), char.nextSibling);
+                  } else {
+                    char.parentNode.appendChild(mkCursor());
+                  }
+                }
+                addCursor();
+                const active = getActive();
+                if (exists(active)) active.removeClass('activeLine');
+                char.parentNode.addClass('activeLine');
+              });
+            }
+            const appendLineListener = (line) => {
+              line.on('click', (e) => {
+                lines.focus();
+                e.stopPropagation();
+                const cursor = getCursor();
+                rmCursor();
+                if (exists(cursor)) cursor.remove();
+                line.appendChild(mkCursor());
+                addCursor();
+                const active = getActive();
+                if (exists(active)) active.removeClass('activeLine');
+                line.addClass('activeLine');
+              });
+            }
+            for (let lineStr of lineArr) {
+              const line = document.create('div', {
+                className: 'line'
+              });
+              for (let charStr of lineStr) {
+                const char = document.create('span', {
+                  className: 'char',
+                  innerHTML: charStr.replace(' ', '\u00A0')
+                });
+                appendListener(char);
+                line.appendChild(char);
+              }
+              appendLineListener(line);
+              lines.appendChild(line);
+            }
+            lines.firstChild.prependChild(document.create('span', {
+              className: 'lineCursor'
+            }));
+            lines.firstChild.addClass('activeLine');
+
+            lines.on('keydown', (e) => {
+              if (document.activeElement === lines) {
+                const cursor = getCursor();
+                if (exists(cursor)) {
+                  switch(e.keyCode) {
+                    case 86:
+                      if (e.ctrlKey) {
+                        e.preventDefault();
+                        window.paste();
+                      }
+                      break;
+                    case 8:
                       e.preventDefault();
-                      window.paste();
-                    }
-                    break;
-                  case 8:
-                    e.preventDefault();
-                    const prev = cursor.previousSibling;
-                    if (exists(prev)) {
-                      prev.remove();
-                    } else {
-                      const node = cursor.parentNode.previousSibling;
-                      const oldNode = cursor.parentNode;
-                      if (exists(node)) {
-                        node.click();
-                        while (oldNode.childNodes.length !== 0) node.appendChild(oldNode.childNodes[0]);
-                        oldNode.remove();
-                      }
-                    }
-                    break;
-                  case 13:
-                    e.preventDefault();
-                    const line = document.create('div', {
-                      className: 'line'
-                    });
-                    appendLineListener(line);
-                    lines.insertBefore(line, cursor.parentNode.nextSibling);
-                    let next = cursor.nextSibling;
-                    while (next) {
-                      const tmp = next.nextSibling;
-                      line.appendChild(next);
-                      next = tmp;
-                    }
-                    const first = line.firstChild;
-                    if (exists(first)) {
-                      first.click();
-                    } else {
-                      line.click();
-                    }
-                    break;
-                  case 32:
-                    e.preventDefault();
-                    const char = document.create('span', {
-                      className: 'char',
-                      innerHTML: '\u00A0'
-                    });
-                    appendListener(char);
-                    cursor.parentNode.insertBefore(char, cursor);
-                    break;
-                  case 37:
-                    e.preventDefault();
-                    if (exists(cursor)) {
-                      let sib = cursor.previousSibling;
-                      if (exists(sib)) {
-                        sib.click();
+                      const prev = cursor.previousSibling;
+                      if (exists(prev)) {
+                        prev.remove();
                       } else {
-                        const line = cursor.parentNode.previousSibling;
-                        if (exists(line)) line.click();
+                        const node = cursor.parentNode.previousSibling;
+                        const oldNode = cursor.parentNode;
+                        if (exists(node)) {
+                          node.click();
+                          while (oldNode.childNodes.length !== 0) node.appendChild(oldNode.childNodes[0]);
+                          oldNode.remove();
+                        }
                       }
-                    }
-                    break;
-                  case 39:
-                    e.preventDefault();
-                    if (exists(cursor)) {
-                      let sib = cursor.nextSibling;
-                      if (exists(sib) && exists(sib.nextSibling)) {
-                        sib.nextSibling.click();
+                      break;
+                    case 13:
+                      e.preventDefault();
+                      const line = document.create('div', {
+                        className: 'line'
+                      });
+                      appendLineListener(line);
+                      lines.insertBefore(line, cursor.parentNode.nextSibling);
+                      let next = cursor.nextSibling;
+                      while (next) {
+                        const tmp = next.nextSibling;
+                        line.appendChild(next);
+                        next = tmp;
+                      }
+                      const first = line.firstChild;
+                      if (exists(first)) {
+                        first.click();
                       } else {
+                        line.click();
+                      }
+                      break;
+                    case 32:
+                      e.preventDefault();
+                      const char = document.create('span', {
+                        className: 'char',
+                        innerHTML: '\u00A0'
+                      });
+                      appendListener(char);
+                      cursor.parentNode.insertBefore(char, cursor);
+                      break;
+                    case 37:
+                      e.preventDefault();
+                      if (exists(cursor)) {
+                        let sib = cursor.previousSibling;
                         if (exists(sib)) {
-                          const line = cursor.parentNode;
-                          line.click();
+                          sib.click();
                         } else {
-                          const line = cursor.parentNode.nextSibling;
-                          if (exists(line)) {
-                            if (exists(line.firstChild)) {
-                              line.firstChild.click();
-                            } else {
-                              line.click();
+                          const line = cursor.parentNode.previousSibling;
+                          if (exists(line)) line.click();
+                        }
+                      }
+                      break;
+                    case 39:
+                      e.preventDefault();
+                      if (exists(cursor)) {
+                        let sib = cursor.nextSibling;
+                        if (exists(sib) && exists(sib.nextSibling)) {
+                          sib.nextSibling.click();
+                        } else {
+                          if (exists(sib)) {
+                            const line = cursor.parentNode;
+                            line.click();
+                          } else {
+                            const line = cursor.parentNode.nextSibling;
+                            if (exists(line)) {
+                              if (exists(line.firstChild)) {
+                                line.firstChild.click();
+                              } else {
+                                line.click();
+                              }
                             }
                           }
                         }
                       }
-                    }
-                    break;
-                  case 38:
-                    e.preventDefault();
-                    if (exists(cursor)) {
-                      const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
-                      const line = cursor.parentNode.previousSibling;
-                      if (exists(line)) {
-                        const elm = line.childNodes[i];
-                        if (exists(elm)) {
-                          elm.click();
-                        } else {
-                          line.click();
+                      break;
+                    case 38:
+                      e.preventDefault();
+                      if (exists(cursor)) {
+                        const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
+                        const line = cursor.parentNode.previousSibling;
+                        if (exists(line)) {
+                          const elm = line.childNodes[i];
+                          if (exists(elm)) {
+                            elm.click();
+                          } else {
+                            line.click();
+                          }
                         }
                       }
-                    }
-                    break;
-                  case 40:
-                    e.preventDefault();
-                    if (exists(cursor)) {
-                      const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
-                      const line = cursor.parentNode.nextSibling;
-                      if (exists(line)) {
-                        const elm = line.childNodes[i];
-                        if (exists(elm)) {
-                          elm.click();
-                        } else {
-                          line.click();
+                      break;
+                    case 40:
+                      e.preventDefault();
+                      if (exists(cursor)) {
+                        const i = Array.prototype.indexOf.call(cursor.parentNode.childNodes, cursor);
+                        const line = cursor.parentNode.nextSibling;
+                        if (exists(line)) {
+                          const elm = line.childNodes[i];
+                          if (exists(elm)) {
+                            elm.click();
+                          } else {
+                            line.click();
+                          }
                         }
                       }
-                    }
-                    break;
-                  case 9:
-                    const e2 = new Event();
-                    e2.initEvent('keydown', true, true);
-                    e2.keyCode = 32;
-                    e2.which = 32;
-                    document.body.dispatchEvent(e2);
-                    break;
+                      break;
+                    case 9:
+                      const e2 = new Event();
+                      e2.initEvent('keydown', true, true);
+                      e2.keyCode = 32;
+                      e2.which = 32;
+                      document.body.dispatchEvent(e2);
+                      break;
+                  }
+                  highlight();
                 }
-                highlight();
               }
-            }
-          });
-          lines.on('keypress', (e) => {
-            if (document.activeElement === lines) {
-              const cursor = getCursor();
-              for (let code of [13, 32]) if (e.keyCode === code) return;
-              if (e.ctrlKey) return;
-              if (exists(cursor)) {
-                let str = String.fromCharCode(e.keyCode);
-                if (!e.shiftKey) str = str.toLowerCase();
-                const char = document.create('span', {
-                  className: 'char',
-                  innerHTML: str
-                });
-                appendListener(char);
-                cursor.parentNode.insertBefore(char, cursor);
-                highlight();
-              }
-            }
-          });
-          lines.on('click', () => {
-            lines.focus();
-            const elm = lines.childNodes[lines.childNodes.length-1];
-            if (exists(elm)) elm.click();
-          });
-          addCursor();
-          const tab = new Tab(name);
-          tab.tabElement.dataset.filePath = `${pth}/${fileName}`;
-          tab.addText = (txt) => {
-            lineArr = txt.split('\n');
-            let lastChar = null;
-            for (let i in lineArr) {
-              let lineStr = lineArr[i];
-              const cursor = getCursor();
-              if (i === 0) {
-                const line = cursor.parentNode;
-                for (let charStr of lineStr) {
+            });
+            lines.on('keypress', (e) => {
+              if (document.activeElement === lines) {
+                const cursor = getCursor();
+                for (let code of [13, 32]) if (e.keyCode === code) return;
+                if (e.ctrlKey) return;
+                if (exists(cursor)) {
+                  let str = String.fromCharCode(e.keyCode);
+                  if (!e.shiftKey) str = str.toLowerCase();
                   const char = document.create('span', {
                     className: 'char',
-                    innerHTML: charStr.replace(' ', '\u00A0')
+                    innerHTML: str
                   });
                   appendListener(char);
-                  line.insertBefore(char, cursor);
-                  lastChar = char;
+                  cursor.parentNode.insertBefore(char, cursor);
+                  highlight();
                 }
-              } else {
-                const line = document.create('div', {
-                  className: 'line'
-                });
-                for (let charStr of lineStr) {
-                  const char = document.create('span', {
-                    className: 'char',
-                    innerHTML: charStr.replace(' ', '\u00A0')
-                  });
-                  appendListener(char);
-                  line.appendChild(char);
-                  lastChar = char;
-                }
-                appendLineListener(line);
-                const p = cursor.parentNode;
-                if (exists(p.nextSibling)) {
-                  lines.insertBefore(line, p.nextSibling);
+              }
+            });
+            lines.on('click', () => {
+              lines.focus();
+              const elm = lines.childNodes[lines.childNodes.length-1];
+              if (exists(elm)) elm.click();
+            });
+            addCursor();
+            const tab = new Tab(name);
+            tab.tabElement.dataset.filePath = `${pth}/${fileName}`;
+            tab.addText = (txt) => {
+              lineArr = txt.split('\n');
+              let lastChar = null;
+              for (let i in lineArr) {
+                let lineStr = lineArr[i];
+                const cursor = getCursor();
+                if (i === 0) {
+                  const line = cursor.parentNode;
+                  for (let charStr of lineStr) {
+                    const char = document.create('span', {
+                      className: 'char',
+                      innerHTML: charStr.replace(' ', '\u00A0')
+                    });
+                    appendListener(char);
+                    line.insertBefore(char, cursor);
+                    lastChar = char;
+                  }
                 } else {
-                  lines.appendChild(line);
+                  const line = document.create('div', {
+                    className: 'line'
+                  });
+                  for (let charStr of lineStr) {
+                    const char = document.create('span', {
+                      className: 'char',
+                      innerHTML: charStr.replace(' ', '\u00A0')
+                    });
+                    appendListener(char);
+                    line.appendChild(char);
+                    lastChar = char;
+                  }
+                  appendLineListener(line);
+                  const p = cursor.parentNode;
+                  if (exists(p.nextSibling)) {
+                    lines.insertBefore(line, p.nextSibling);
+                  } else {
+                    lines.appendChild(line);
+                  }
                 }
               }
+              if (exists(lastChar.nextSibling)) {
+                lastChar.nextSibling.click();
+              } else {
+                lastChar.parentNode.click();
+              }
             }
-            if (exists(lastChar.nextSibling)) {
-              lastChar.nextSibling.click();
-            } else {
-              lastChar.parentNode.click();
-            }
-          }
-          tab.contElement.appendChild(lines);
-          const highlighter = new Highlights();
-          function highlight() {
-            if (path.extname(fileName) === '.js') {
+            tab.contElement.appendChild(lines);
+            function highlight() {
               app.web.getFileContents((tmpCont) => {
                 const html = highlighter.highlightSync({
                   fileContents: tmpCont,
-                  scopeName: 'source.js'
+                  scopeName: getScopeNameForExtension(path.extname(fileName))
                 });
                 const tmpElm = document.create('div', {
                   innerHTML: html
@@ -957,17 +1036,17 @@ class SidebarFileItem extends EventEmitter {
                 }
               });
             }
-          }
-          highlight();
-          defaultTabManager.addTab(tab);
-          defaultTabManager.setActiveTab(tab.id);
-          lines.focus();
-          document.get('#tabHeaders').scrollIntoView();
-          tab.on('activated', () => {
+            highlight();
+            defaultTabManager.addTab(tab);
+            defaultTabManager.setActiveTab(tab.id);
             lines.focus();
             document.get('#tabHeaders').scrollIntoView();
+            tab.on('activated', () => {
+              lines.focus();
+              document.get('#tabHeaders').scrollIntoView();
+            });
           });
-        });
+        }
       }
     });
   }

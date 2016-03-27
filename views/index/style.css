@@ -218,6 +218,23 @@ body {
 .lineCursor {
   animation: cursorAnimation 1s linear infinite;
 }
+.ctxMenu {
+  position: fixed;
+  z-index: 3;
+  background-color: inherit;
+  border: 3px solid #000;
+  border-bottom: none;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+}
+.menuItem {
+  background-color: inherit;
+  border-bottom: 3px solid #000;
+}
+.noColor {
+  background-color: transparent;
+}
 @-moz-keyframes cursorAnimation {
   0% {
     border-left: 2px solid #add8e6;
