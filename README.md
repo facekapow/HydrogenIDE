@@ -11,7 +11,7 @@ Currently it supports:
  * Project execution
  * Dependency management (to an extent)
 
-And more in the future.
+And more in the future. Btw, it's at least partially ready, I use it to write it (I write the IDE's code using the IDE)!
 
 ## Install
 ```bash

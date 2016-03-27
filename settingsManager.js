@@ -102,6 +102,7 @@ module.exports = {
                 }
                 if (i+1 === grammars.length) {
                   if (j+1 === hls.length) {
+                    exts['oxyproj'] = 'source.json';
                     fs.writeFile(`${cfgDir}/highlighters/extensions.json`, JSON.stringify(exts), (err) => {
                       if (err) return;
                     });

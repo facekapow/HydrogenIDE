@@ -67,13 +67,16 @@ module.exports = {
           }, (dirs) => {
             if (!dirs || !dirs[0]) return cb(new Error('User canceled the dialog'), null);
             const dir = dirs[0];
-            proj.path = `${dir}/${name}`
+            proj.path = `${dir}/${name}`;
             fs.mkdir(proj.path, (err) => {
               if (err) return cb(err, null);
               ncp(`${__dirname}/projectTemplates/${types[type][0].toLowerCase()}/${langs[lang].toLowerCase()}`, proj.path, (err) => {
                 if (err) return cb(err, null);
-                fs.writeFile(`${proj.path}/${name}.oxyproj`, JSON.stringify(proj, null, '  '), (err) => {
+                let tmpPath = proj.path;
+                proj.path = undefined;
+                fs.writeFile(`${tmpPath}/${name}.oxyproj`, JSON.stringify(proj, null, '  '), (err) => {
                   if (err) return cb(err, null);
+                  proj.path = tmpPath;
                   fs.writeFile(`${proj.path}/package.json`, JSON.stringify({
                     name: name,
                     version: '1.0.0',
@@ -127,16 +130,9 @@ module.exports = {
         if (err) return cb(err, null);
         const proj = JSON.parse(String(cont));
         const pPath = path.dirname(file);
-        if (proj.path !== pPath) {
-          proj.path = pPath;
-          fs.writeFile(file, JSON.stringify(proj, null, '  '), (err) => {
-            if (err) return cb(err, null);
-            cb(null, proj);
-          });
-        } else {
-          cb(null, proj);
-          setWatch(proj.path);
-        }
+        proj.path = pPath;
+        cb(null, proj);
+        setWatch(proj.path);
       });
     });
   },

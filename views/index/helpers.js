@@ -949,9 +949,32 @@ class SidebarFileItem extends EventEmitter {
               const elm = lines.childNodes[lines.childNodes.length-1];
               if (exists(elm)) elm.click();
             });
+            lines.on('blur', () => {
+              const active = lines.getElementsByClassName('activeLine')[0];
+              const cursor = getCursor();
+              if (exists(active)) active.removeClass('activeLine');
+              if (exists(cursor)) cursor.remove();
+            });
             addCursor();
             const tab = new Tab(name);
             tab.tabElement.dataset.filePath = `${pth}/${fileName}`;
+            /*tab.tabElement.addEventListener('mousedown', (e) => {
+              if (e.button === 2) {
+                // Right mouse button
+                e.stopImmediatePropagation();
+                var ctx = new ContextMenu([
+                  'Select Syntax'
+                ], e.screenX, e.screenY);
+                ctx.on('click', (i) => {
+                  ctx.close();
+                  switch(i) {
+                    case 0:
+                      // Select Syntax
+                      break;
+                  }
+                });
+              }
+            });*/
             tab.addText = (txt) => {
               lineArr = txt.split('\n');
               let lastChar = null;
