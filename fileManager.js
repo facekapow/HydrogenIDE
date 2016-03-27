@@ -193,7 +193,7 @@ module.exports = {
     module.exports.recurseList(dir, (err, list) => {
       if (err) return cb(err);
       const arr = [];
-      for (let item of list) if (path.basename(item) === '.DS_Store') arr.push(item);
+      for (const item of list) if (path.basename(item) === '.DS_Store') arr.push(item);
       module.exports.rmRf(arr, (err) => {
         if (err) return cb(err);
         cb(null);

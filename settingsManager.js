@@ -7,10 +7,10 @@ const child_process = require('child_process');
 
 module.exports = {
   checkDirs: (cb) => {
-    var cfgDir = app.getPath('userData');
-    fs.stat(cfgDir, (err, stats) => {
-      function done() {
-        fs.stat(`${cfgDir}/highlighters`, (err, stats) => {
+    const cfgDir = app.getPath('userData');
+    fs.stat(cfgDir, (err) => {
+      const done = () => {
+        fs.stat(`${cfgDir}/highlighters`, (err) => {
           if (err) {
             if (err.code !== 'ENOENT') return cb(err);
             fs.mkdir(`${cfgDir}/highlighters`, (err) => {
@@ -34,12 +34,12 @@ module.exports = {
     });
   },
   checkModules: (cb) => {
-    var cfgDir = app.getPath('userData');
-    fs.stat(`${cfgDir}/highlighters/package.json`, (err, stats) => {
-      function done() {
+    const cfgDir = app.getPath('userData');
+    fs.stat(`${cfgDir}/highlighters/package.json`, (err) => {
+      const done = () => {
         child_process.exec('npm update', {
-          cwd: `${cfgDir}/highlighters`,
-        }, (err, stderr, stdout) => {
+          cwd: `${cfgDir}/highlighters`
+        }, (err) => {
           if (err) return cb(err);
           module.exports.scanHighlighters();
           cb(null);
@@ -67,45 +67,43 @@ module.exports = {
     });
   },
   getHighlighters: (cb) => {
-    var cfgDir = app.getPath('userData');
+    const cfgDir = app.getPath('userData');
     fs.readFile(`${cfgDir}/highlighters/package.json`, (err, cont) => {
       if (err) return cb(err, null);
       cb(null, Object.keys(JSON.parse(String(cont)).dependencies));
     });
   },
   scanHighlighters: () => {
-    var cfgDir = app.getPath('userData');
+    const cfgDir = app.getPath('userData');
     fs.readFile(`${cfgDir}/highlighters/extensions.json`, (err, extCont) => {
       if (err && err.code !== 'ENOENT') return;
-      if (err) {
-        var exts = {};
-      } else {
-        var exts = JSON.parse(String(extCont));
+      let exts = {};
+      if (!err) {
+        exts = JSON.parse(String(extCont));
       }
       fs.readdir(`${cfgDir}/highlighters/node_modules`, (err, hls) => {
         if (err) return;
-        var tmp1 = (j) => {
-          var hl = hls[j];
+        const tmp1 = (j) => {
+          const hl = hls[j];
           fs.readdir(`${cfgDir}/highlighters/node_modules/${hl}/grammars`, (err, grammars) => {
             if (err) return;
-            var tmp = (i) => {
-              var grammar = grammars[i];
+            const tmp = (i) => {
+              const grammar = grammars[i];
               fs.readFile(`${cfgDir}/highlighters/node_modules/${hl}/grammars/${grammar}`, (err, cont) => {
                 if (err) return;
-                var obj = {};
+                let obj = {};
                 if (path.extname(grammar) === '.json') {
                   obj = JSON.parse(String(cont));
                 } else if (path.extname(grammar) === '.cson') {
                   obj = CSON.parse(String(cont));
                 }
-                for (var fileType of obj.fileTypes) {
+                for (const fileType of obj.fileTypes) {
                   exts[fileType] = obj.scopeName;
                 }
-                if ((i+1) === grammars.length) {
-                  if ((j+1) === hls.length) {
+                if (i+1 === grammars.length) {
+                  if (j+1 === hls.length) {
                     fs.writeFile(`${cfgDir}/highlighters/extensions.json`, JSON.stringify(exts), (err) => {
                       if (err) return;
-                      console.log('done scanning...');
                     });
                   } else {
                     tmp1(j+1);
